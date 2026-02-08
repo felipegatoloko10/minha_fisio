@@ -258,9 +258,65 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
       ),
       body: _treatments.isEmpty
           ? Center(
-              child: ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) => _loadData()),
-                child: const Text("ADICIONAR PRIMEIRO TRATAMENTO"),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.spa_rounded,
+                        size: 80,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Bem-vindo(a)!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Adoramos ter você aqui conosco. Vamos começar sua jornada de recuperação?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade700,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CreateTreatmentPage()),
+                      ).then((_) => _loadData()),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text(
+                        "INICIAR NOVO TRATAMENTO",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade800,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           : TabBarView(
