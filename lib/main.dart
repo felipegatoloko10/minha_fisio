@@ -5,10 +5,36 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:local_auth/local_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MinhaFisioApp());
+}
+
+class BiometricService {
+  static final LocalAuthentication _auth = LocalAuthentication();
+
+  static Future<bool> canAuthenticate() async {
+    final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+    final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
+    return canAuthenticate;
+  }
+
+  static Future<bool> authenticate() async {
+    try {
+      if (!await canAuthenticate()) return false;
+      return await _auth.authenticate(
+        localizedReason: 'Autentique-se para acessar o Minha Fisio',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+    } catch (e) {
+      return false;
+    }
+  }
 }
 
 class MinhaFisioApp extends StatelessWidget {
@@ -38,6 +64,8 @@ class MinhaFisioApp extends StatelessWidget {
 class StorageService {
   static const String _usersKey = 'users_list';
   static const String _treatmentsKey = 'all_treatments_list';
+  static const String _biometricEnabledKey = 'biometric_enabled';
+  static const String _lastUserEmailKey = 'last_user_email';
 
   static Future<List<dynamic>> getUsers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,6 +79,22 @@ class StorageService {
     if (users.any((u) => u['email'] == user['email'])) return false;
     users.add(user);
     return await prefs.setString(_usersKey, json.encode(users));
+  }
+
+  static Future<void> setBiometricEnabled(bool enabled, String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_biometricEnabledKey, enabled);
+    if (enabled) await prefs.setString(_lastUserEmailKey, email);
+  }
+
+  static Future<bool> isBiometricEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricEnabledKey) ?? false;
+  }
+
+  static Future<String?> getLastUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastUserEmailKey);
   }
 
   static Future<void> addTreatment(Map<String, dynamic> treatment) async {
@@ -91,15 +135,73 @@ class _LoginPageState extends State<LoginPage> {
     super.initState();
     _emailController = TextEditingController(text: widget.initialEmail);
     _passwordController = TextEditingController(text: widget.initialPassword);
+    
+    // Tenta login biométrico após o build da tela
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkBiometricLogin());
+  }
+
+  void _checkBiometricLogin() async {
+    bool enabled = await StorageService.isBiometricEnabled();
+    if (enabled) {
+      String? email = await StorageService.getLastUserEmail();
+      if (email != null) {
+        bool authenticated = await BiometricService.authenticate();
+        if (authenticated) {
+          final users = await StorageService.getUsers();
+          final user = users.firstWhere((u) => u['email'] == email, orElse: () => null);
+          if (user != null) {
+            if (!mounted) return;
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardPage(user: user)));
+          }
+        }
+      }
+    }
   }
 
   void _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preencha todos os campos'), backgroundColor: Colors.orange));
+      return;
+    }
+
+    final bool emailValid = RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(email);
+    if (!emailValid) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insira um e-mail válido'), backgroundColor: Colors.orange));
+      return;
+    }
+
     final users = await StorageService.getUsers();
     final user = users.firstWhere(
-      (u) => u['email'] == _emailController.text && u['password'] == _passwordController.text,
+      (u) => u['email'] == email && u['password'] == password,
       orElse: () => null,
     );
     if (user != null) {
+      if (!mounted) return;
+      
+      // Se biometria não estiver habilitada, pergunta se deseja habilitar
+      bool bioEnabled = await StorageService.isBiometricEnabled();
+      bool canBio = await BiometricService.canAuthenticate();
+      
+      if (!bioEnabled && canBio) {
+        bool? wantBio = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Login por Digital"),
+            content: const Text("Deseja habilitar o acesso por biometria (digital) para os próximos acessos?"),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("AGORA NÃO")),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("SIM, HABILITAR")),
+            ],
+          )
+        );
+        if (wantBio == true) {
+          await StorageService.setBiometricEnabled(true, user['email']);
+        }
+      }
+
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardPage(user: user)));
     } else {
@@ -115,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              const Icon(Icons.medical_services, size: 80, color: Colors.blue),
+              Image.asset('assets/icon/logo.png', height: 120),
               const SizedBox(height: 16),
               const Text('Minha Fisio', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 32),
@@ -135,6 +237,19 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: _login, child: const Text('ENTRAR'))),
+              const SizedBox(height: 16),
+              FutureBuilder<bool>(
+                future: StorageService.isBiometricEnabled(),
+                builder: (context, snapshot) {
+                  if (snapshot.data == true) {
+                    return IconButton(
+                      icon: const Icon(Icons.fingerprint, size: 40, color: Colors.blue),
+                      onPressed: _checkBiometricLogin,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())), child: const Text('Não tem conta? Cadastre-se')),
             ],
           ),
@@ -171,9 +286,32 @@ class _RegisterPageState extends State<RegisterPage> {
             TextField(controller: _passwordController, obscureText: _obscurePassword, decoration: InputDecoration(labelText: 'Senha', border: const OutlineInputBorder(), suffixIcon: IconButton(icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off), onPressed: () => setState(() => _obscurePassword = !_obscurePassword)))),
             const SizedBox(height: 24),
             SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () async {
-              if (await StorageService.saveUser({'name': _nameController.text, 'email': _emailController.text, 'password': _passwordController.text})) {
+              final name = _nameController.text.trim();
+              final email = _emailController.text.trim();
+              final password = _passwordController.text.trim();
+
+              if (name.isEmpty || email.isEmpty || password.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preencha todos os campos'), backgroundColor: Colors.orange));
+                return;
+              }
+
+              final bool emailValid = RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(email);
+              if (!emailValid) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insira um e-mail válido'), backgroundColor: Colors.orange));
+                return;
+              }
+
+              if (password.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A senha deve ter pelo menos 6 caracteres'), backgroundColor: Colors.orange));
+                return;
+              }
+
+              if (await StorageService.saveUser({'name': name, 'email': email, 'password': password})) {
                 if (!mounted) return;
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LoginPage(initialEmail: _emailController.text, initialPassword: _passwordController.text)), (r) => false);
+                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LoginPage(initialEmail: email, initialPassword: password)), (r) => false);
+              } else {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este e-mail já está cadastrado'), backgroundColor: Colors.red));
               }
             }, child: const Text('CADASTRAR'))),
           ],
@@ -193,6 +331,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
   List<dynamic> _treatments = [];
   TabController? _tabController;
+  bool _isFabExpanded = false;
 
   @override
   void initState() {
@@ -263,19 +402,12 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.spa_rounded,
-                        size: 80,
-                        color: Colors.blue.shade800,
-                      ),
+                    Image.asset(
+                      'assets/icon/logo.png',
+                      height: 180,
+                      fit: BoxFit.contain,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     Text(
                       'Bem-vindo(a)!',
                       style: TextStyle(
@@ -335,28 +467,55 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
       floatingActionButton: _treatments.isEmpty ? null : Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton.small(
-            heroTag: "delete",
-            backgroundColor: Colors.red.shade100,
-            onPressed: _deleteCurrentTreatment,
-            child: const Icon(Icons.delete, color: Colors.red),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton.small(
-            heroTag: "edit",
-            backgroundColor: Colors.blue.shade100,
-            onPressed: () {
-              int idx = _tabController!.index;
-              Navigator.push(context, MaterialPageRoute(builder: (_) => CreateTreatmentPage(treatmentToEdit: _treatments[idx]))).then((_) => _loadData());
-            },
-            child: const Icon(Icons.edit, color: Colors.blue),
-          ),
-          const SizedBox(height: 8),
+          if (_isFabExpanded) ...[
+            FloatingActionButton.small(
+              heroTag: "delete",
+              backgroundColor: Colors.red.shade100,
+              onPressed: () {
+                setState(() => _isFabExpanded = false);
+                _deleteCurrentTreatment();
+              },
+              child: const Icon(Icons.delete, color: Colors.red),
+            ),
+            const SizedBox(height: 12),
+            FloatingActionButton.small(
+              heroTag: "edit",
+              backgroundColor: Colors.blue.shade100,
+              onPressed: () {
+                setState(() => _isFabExpanded = false);
+                int idx = _tabController!.index;
+                Navigator.push(context, MaterialPageRoute(builder: (_) => CreateTreatmentPage(treatmentToEdit: _treatments[idx]))).then((_) => _loadData());
+              },
+              child: const Icon(Icons.edit, color: Colors.blue),
+            ),
+            const SizedBox(height: 12),
+          ],
           FloatingActionButton(
             heroTag: "add",
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) => _loadData()),
-            child: const Icon(Icons.add),
+            backgroundColor: _isFabExpanded ? Colors.blueGrey : Colors.blue.shade800,
+            foregroundColor: Colors.white,
+            onPressed: () {
+              if (_isFabExpanded) {
+                // Se já estiver aberto, o botão + agora abre a página de criação
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) {
+                  setState(() => _isFabExpanded = false);
+                  _loadData();
+                });
+              } else {
+                // Se estiver fechado, apenas expande as opções
+                setState(() => _isFabExpanded = true);
+              }
+            },
+            child: Icon(_isFabExpanded ? Icons.add_task : Icons.add),
           ),
+          if (_isFabExpanded) 
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: TextButton(
+                onPressed: () => setState(() => _isFabExpanded = false),
+                child: const Text("Fechar", style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+              ),
+            ),
         ],
       ),
     );
