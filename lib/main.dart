@@ -710,27 +710,72 @@ class _CreateTreatmentPageState extends State<CreateTreatmentPage> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
+                if (_nomeController.text.isEmpty || _qtdController.text.isEmpty) return;
+                
                 int qtd = int.parse(_qtdController.text);
                 List<int> targetDays = [];
                 for (int i = 0; i < 7; i++) { if (_selectedDays[i]) targetDays.add(i + 1); }
 
+                DateTime now = DateTime.now();
+                DateTime today = DateTime(now.year, now.month, now.day);
+
                 if (isEditing) {
                   List<dynamic> treatments = await StorageService.getTreatments();
                   int idx = treatments.indexWhere((t) => t['id'] == widget.treatmentToEdit['id']);
-                  treatments[idx]['info'] = {
-                    'total': qtd, 
-                    'days_indices': targetDays,
-                    'nome': _nomeController.text,
-                    'profissional': _profController.text,
-                  };
-                  await StorageService.updateTreatments(treatments);
+                  
+                  if (idx != -1) {
+                    List<dynamic> oldSessions = List.from(treatments[idx]['sessions']);
+                    // Mantém apenas sessões que já passaram (antes de hoje)
+                    List<dynamic> keptSessions = oldSessions.where((s) {
+                      DateTime sDate = DateTime.parse(s['date']);
+                      return sDate.isBefore(today);
+                    }).toList();
+
+                    // Gera as novas sessões necessárias para completar o total
+                    List<dynamic> newSessions = [];
+                    int sessionsRemaining = qtd - keptSessions.length;
+                    
+                    if (sessionsRemaining > 0) {
+                      DateTime current = today;
+                      int count = 0;
+                      while (count < sessionsRemaining) {
+                        if (targetDays.contains(current.weekday)) {
+                          String dateStr = DateFormat('yyyy-MM-dd').format(current);
+                          // Evita duplicar se por acaso já existir no histórico do dia de hoje (caso esteja editando no meio do dia)
+                          if (!keptSessions.any((s) => s['date'] == dateStr)) {
+                            newSessions.add({
+                              'date': dateStr, 
+                              'status': 'Pendente', 
+                              'time': '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}'
+                            });
+                            count++;
+                          }
+                        }
+                        current = current.add(const Duration(days: 1));
+                      }
+                    }
+
+                    treatments[idx]['info'] = {
+                      'total': qtd, 
+                      'days_indices': targetDays,
+                      'nome': _nomeController.text,
+                      'profissional': _profController.text,
+                    };
+                    treatments[idx]['sessions'] = [...keptSessions, ...newSessions];
+                    
+                    await StorageService.updateTreatments(treatments);
+                  }
                 } else {
                   List<dynamic> sessions = [];
-                  DateTime current = DateTime.now();
+                  DateTime current = today;
                   int count = 0;
                   while (count < qtd) {
                     if (targetDays.contains(current.weekday)) {
-                      sessions.add({'date': DateFormat('yyyy-MM-dd').format(current), 'status': 'Pendente', 'time': '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}'});
+                      sessions.add({
+                        'date': DateFormat('yyyy-MM-dd').format(current), 
+                        'status': 'Pendente', 
+                        'time': '${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}'
+                      });
                       count++;
                     }
                     current = current.add(const Duration(days: 1));
