@@ -1,27 +1,26 @@
 # Minha Fisio 🏥
 
-O **Minha Fisio** é um aplicativo mobile desenvolvido em Flutter para auxiliar pacientes no acompanhamento de seus tratamentos de fisioterapia. O app permite gerenciar sessões, visualizar progresso e organizar horários de forma intuitiva.
+O **Minha Fisio** é um aplicativo mobile completo desenvolvido em Flutter para auxiliar pacientes no acompanhamento de seus tratamentos de fisioterapia. O app combina praticidade, segurança e um design acolhedor para garantir que você nunca perca uma sessão e acompanhe sua evolução de perto.
 
-## 🚀 Funcionalidades
+## 🚀 Novas Funcionalidades
 
-- **Controle de Sessões:** Marque sessões como Realizadas, Pendentes, Canceladas ou Remarcadas.
-- **Calendário Interativo:** Visualize todo o seu cronograma de tratamento em um calendário personalizado.
-- **Cálculo de Progresso:** Acompanhe a porcentagem de conclusão do seu tratamento em tempo real.
-- **Gestão de Múltiplos Tratamentos:** Adicione diferentes tipos de fisioterapia (ex: Traumato, Neuro, RPG) simultaneamente.
-- **Ajuste Automático:** Ao cancelar uma sessão, o app automaticamente sugere uma nova data ao final do tratamento para garantir que você complete o ciclo prescrito.
-- **Sistema de Usuários:** Cadastro e login local para manter seus dados seguros no dispositivo.
+- **🔓 Autenticação Biométrica:** Entre no app de forma rápida e segura usando sua digital (Biometria).
+- **🛡️ Segurança & Validação:** Sistema de cadastro com validação de e-mails reais e proteção contra duplicidade de contas.
+- **📈 Gestão de Tratamentos Inteligente:**
+  - Crie e edite tratamentos definindo profissional, quantidade de sessões e horários.
+  - **Proteção de Histórico:** Ao editar um tratamento, o histórico de sessões passadas é preservado automaticamente.
+  - **Menu Speed Dial:** Interface limpa com botão flutuante expansível para gerenciar (editar/excluir) tratamentos.
+- **📅 Calendário & Status:** Controle total das sessões (Realizada, Pendente, Cancelada, Remarcada).
+- **✨ Design Acolhedor:** Tela inicial personalizada com a logo oficial e mensagens motivacionais para o início do tratamento.
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Flutter & Dart**
-- **Table Calendar:** Para a interface de calendário.
-- **Percent Indicator:** Para visualização de progresso.
-- **Shared Preferences:** Para persistência local de dados.
-- **Intl:** Para internacionalização (PT-BR).
-
-## 📱 Capturas de Tela (Em breve)
-
-*(Adicione prints do app aqui)*
+- **Local Auth:** Para autenticação biométrica segura.
+- **Table Calendar:** Interface de cronograma interativo.
+- **Percent Indicator:** Acompanhamento visual de progresso.
+- **Shared Preferences:** Persistência de dados local segura.
+- **Intl:** Localização completa para Português (Brasil).
 
 ## 🛠️ Como executar o projeto
 
@@ -30,15 +29,11 @@ O **Minha Fisio** é um aplicativo mobile desenvolvido em Flutter para auxiliar 
    ```bash
    git clone https://github.com/felipegatoloko10/minha_fisio.git
    ```
-3. Navegue até a pasta do projeto:
-   ```bash
-   cd minha_fisio
-   ```
-4. Instale as dependências:
+3. Instale as dependências:
    ```bash
    flutter pub get
    ```
-5. Execute o app:
+4. Execute o app:
    ```bash
    flutter run
    ```
