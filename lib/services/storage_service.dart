@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:crypto/crypto.dart'; // Adicionado
 import '../models/treatment_model.dart';
 
 class StorageService {
@@ -19,7 +20,7 @@ class StorageService {
     String path = join(await getDatabasesPath(), 'minha_fisio.db');
     return await openDatabase(
       path,
-      version: 2, // Aumentei a versão para o upgrade
+      version: 2,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE treatments ADD COLUMN start_date TEXT');
@@ -49,6 +50,56 @@ class StorageService {
     );
   }
 
+  // Helper para hash
+  static String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  // Login seguro com migração automática
+  static Future<Map<String, dynamic>?> loginUser(String email, String password) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+
+    if (results.isEmpty) return null;
+
+    final user = results.first;
+    final storedPassword = user['password'] as String;
+    final hashedPassword = _hashPassword(password);
+
+    if (storedPassword == hashedPassword) {
+      return user;
+    } else if (storedPassword == password) {
+      // Migração: senha estava em texto plano, atualizar para hash
+      await db.update(
+        'users',
+        {'password': hashedPassword},
+        where: 'id = ?',
+        whereArgs: [user['id']],
+      );
+      // Retorna o usuário com a senha já atualizada (opcional, mas bom pra consistência)
+      return {...user, 'password': hashedPassword};
+    }
+
+    return null; // Senha incorreta
+  }
+
+  static Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+    if (results.isEmpty) return null;
+    return results.first;
+  }
+
   static Future<List<Map<String, dynamic>>> getUsers() async {
     final db = await database;
     return await db.query('users');
@@ -57,7 +108,11 @@ class StorageService {
   static Future<bool> saveUser(Map<String, String> user) async {
     final db = await database;
     try {
-      await db.insert('users', user);
+      final userToSave = Map<String, String>.from(user);
+      if (userToSave.containsKey('password')) {
+        userToSave['password'] = _hashPassword(userToSave['password']!);
+      }
+      await db.insert('users', userToSave);
       return true;
     } catch (e) {
       return false;
@@ -78,6 +133,16 @@ class StorageService {
   static Future<String?> getLastUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_lastUserEmailKey);
+  }
+
+  static Future<void> setThemeMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('theme_mode', mode);
+  }
+
+  static Future<String> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('theme_mode') ?? 'system';
   }
 
   static Future<void> addTreatment(TreatmentModel treatment) async {

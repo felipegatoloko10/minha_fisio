@@ -33,9 +33,8 @@ class _LoginPageState extends State<LoginPage> {
       if (email != null) {
         bool authenticated = await BiometricService.authenticate();
         if (authenticated) {
-          final users = await StorageService.getUsers();
-          final user = users.firstWhere((u) => u['email'] == email, orElse: () => {});
-          if (user.isNotEmpty) {
+          final user = await StorageService.getUserByEmail(email);
+          if (user != null) {
             if (!mounted) return;
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardPage(user: user)));
           }
@@ -53,13 +52,9 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final users = await StorageService.getUsers();
-    final user = users.firstWhere(
-      (u) => u['email'] == email && u['password'] == password,
-      orElse: () => {},
-    );
+    final user = await StorageService.loginUser(email, password);
 
-    if (user.isNotEmpty) {
+    if (user != null) {
       if (!mounted) return;
       
       bool bioEnabled = await StorageService.isBiometricEnabled();

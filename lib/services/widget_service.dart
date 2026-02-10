@@ -45,11 +45,16 @@ class WidgetService {
         nextTreatment.nome,
       );
       await HomeWidget.saveWidgetData<String>(
+        'widget_treatment_id',
+        nextTreatment.id.toString(),
+      );
+      await HomeWidget.saveWidgetData<String>(
         'widget_date_time',
         '📅 ${DateFormat('dd/MM').format(nextSession.date)} às ${nextSession.time}',
       );
     } else {
       await HomeWidget.saveWidgetData<String>('widget_treatment', 'Tudo em dia!');
+      await HomeWidget.saveWidgetData<String>('widget_treatment_id', '');
       await HomeWidget.saveWidgetData<String>('widget_date_time', 'Nenhuma sessão pendente ✨');
     }
 
