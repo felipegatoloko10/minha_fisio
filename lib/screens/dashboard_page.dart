@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
 import '../services/widget_service.dart';
+import '../services/notification_service.dart';
+import '../services/theme_service.dart';
 import '../models/treatment_model.dart';
 import 'login_page.dart';
 import 'create_treatment_page.dart';
@@ -22,6 +26,33 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   void initState() {
     super.initState();
     _loadData();
+    // Verifica se o app foi aberto pelo widget
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetLaunch);
+    // Escuta cliques no widget enquanto o app está em segundo plano/aberto
+    HomeWidget.widgetClicked.listen(_handleWidgetLaunch);
+  }
+
+  void _handleWidgetLaunch(Uri? uri) {
+    if (uri != null && uri.host == 'treatment') {
+      final treatmentIdStr = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : null;
+      if (treatmentIdStr != null && treatmentIdStr.isNotEmpty) {
+        int id = int.tryParse(treatmentIdStr) ?? -1;
+        _navigateToTreatment(id);
+      }
+    }
+  }
+
+  void _navigateToTreatment(int treatmentId) {
+    if (treatmentId == -1 || _treatments.isEmpty) return;
+    
+    // Aguarda o quadro ser desenhado para garantir que o TabController esteja pronto
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      int index = _treatments.indexWhere((t) => t.id == treatmentId);
+      if (index != -1 && _tabController != null) {
+        _tabController!.animateTo(index);
+      }
+    });
   }
 
   void _loadData() async {
@@ -39,6 +70,8 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     
     // Atualiza o widget da tela inicial
     await WidgetService.updateNextSessionWidget(_treatments);
+    // Garante que as notificações estejam sempre sincronizadas e dentro do limite
+    await NotificationService.rescheduleAll();
   }
 
   void _deleteCurrentTreatment() async {
@@ -66,12 +99,38 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     );
   }
 
+  IconData _getThemeIcon(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light: return Icons.wb_sunny;
+      case ThemeMode.dark: return Icons.nightlight_round;
+      case ThemeMode.system: return Icons.brightness_auto;
+    }
+  }
+
+  void _toggleTheme() {
+    final provider = Provider.of<ThemeProvider>(context, listen: false);
+    if (provider.themeMode == ThemeMode.system) {
+      provider.setThemeMode(ThemeMode.light);
+    } else if (provider.themeMode == ThemeMode.light) {
+      provider.setThemeMode(ThemeMode.dark);
+    } else {
+      provider.setThemeMode(ThemeMode.system);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Olá, ${widget.user['name'].split(' ')[0]}'),
         actions: [
+          IconButton(
+            icon: Icon(_getThemeIcon(themeProvider.themeMode)),
+            onPressed: _toggleTheme,
+            tooltip: 'Alternar Tema',
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()))),
         ],
         bottom: _treatments.isEmpty 
@@ -79,6 +138,9 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
           : TabBar(
               controller: _tabController,
               isScrollable: true,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
               tabs: _treatments.map((t) => Tab(text: t.nome)).toList(),
             ),
       ),

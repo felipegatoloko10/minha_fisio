@@ -1,42 +1,37 @@
 # Minha Fisio 🏥
 
-O **Minha Fisio** é um aplicativo mobile completo desenvolvido em Flutter para auxiliar pacientes no acompanhamento de seus tratamentos de fisioterapia. O app combina praticidade, segurança e um design acolhedor para garantir que você nunca perca uma sessão e acompanhe sua evolução de perto.
+O **Minha Fisio** é um aplicativo Flutter desenvolvido para ajudar pacientes a gerenciarem seus tratamentos de fisioterapia de forma organizada, intuitiva e eficiente.
 
-## 🚀 Novas Funcionalidades
+## 🚀 Versão 1.0 - Funcionalidades Principais
 
-- **🔓 Autenticação Biométrica:** Entre no app de forma rápida e segura usando sua digital (Biometria).
-- **🛡️ Segurança & Validação:** Sistema de cadastro com validação de e-mails reais e proteção contra duplicidade de contas.
-- **📈 Gestão de Tratamentos Inteligente:**
-  - Crie e edite tratamentos definindo profissional, quantidade de sessões e horários.
-  - **Proteção de Histórico:** Ao editar um tratamento, o histórico de sessões passadas é preservado automaticamente.
-  - **Menu Speed Dial:** Interface limpa com botão flutuante expansível para gerenciar (editar/excluir) tratamentos.
-- **📅 Calendário & Status:** Controle total das sessões (Realizada, Pendente, Cancelada, Remarcada).
-- **✨ Design Acolhedor:** Tela inicial personalizada com a logo oficial e mensagens motivacionais para o início do tratamento.
+Esta versão traz uma refatoração completa e a implementação de recursos avançados:
+
+*   **🔐 Autenticação Biométrica**: Acesso seguro via digital para proteger seus dados de saúde.
+*   **📅 Cronograma Inteligente**: Gere automaticamente todas as sessões do seu tratamento com base na quantidade e nos dias da semana escolhidos.
+*   **🕒 Notificações Automáticas**: Receba lembretes no celular 1 hora antes de cada sessão para nunca mais esquecer um atendimento.
+*   **🖼️ Widget de Tela Inicial**: Visualize sua próxima sessão diretamente na tela inicial do Android com um card elegante e informativo.
+*   **📊 Acompanhamento de Progresso**: Barra de progresso visual que mostra a porcentagem concluída do tratamento em tempo real.
+*   **🗓️ Calendário Interativo**: Gerencie cada sessão individualmente (Realizada, Pendente, Cancelada ou Remarcada) com cores indicativas.
+*   **💾 Persistência com SQLite**: Seus dados são salvos localmente em um banco de dados robusto e veloz.
+*   **📍 Data de Início Flexível**: Planeje tratamentos que começarão em datas futuras.
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Flutter & Dart**
-- **Local Auth:** Para autenticação biométrica segura.
-- **Table Calendar:** Interface de cronograma interativo.
-- **Percent Indicator:** Acompanhamento visual de progresso.
-- **Shared Preferences:** Persistência de dados local segura.
-- **Intl:** Localização completa para Português (Brasil).
+*   **Flutter & Dart**
+*   **SQLite** (`sqflite`) para armazenamento local.
+*   **SharedPreferences** para configurações rápidas.
+*   **Local Auth** para biometria.
+*   **Flutter Local Notifications** para lembretes.
+*   **Home Widget** para integração com a tela inicial do sistema.
+*   **Table Calendar** para gestão de datas.
 
-## 🛠️ Como executar o projeto
+## 📦 Estrutura do Projeto
 
-1. Certifique-se de ter o [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado.
-2. Clone este repositório:
-   ```bash
-   git clone https://github.com/felipegatoloko10/minha_fisio.git
-   ```
-3. Instale as dependências:
-   ```bash
-   flutter pub get
-   ```
-4. Execute o app:
-   ```bash
-   flutter run
-   ```
+O código segue as melhores práticas de organização:
+*   `lib/models/`: Classes de dados (User, Treatment, Session).
+*   `lib/screens/`: Interfaces de usuário (Login, Cadastro, Dashboard, Criação).
+*   `lib/services/`: Lógica de negócio (Banco de dados, Notificações, Biometria, Widget).
+*   `lib/widgets/`: Componentes visuais reutilizáveis.
 
 ---
-Desenvolvido por [Felipe](https://github.com/felipegatoloko10) 🚀
+Desenvolvido por [Felipe](https://github.com/felipegatoloko10)

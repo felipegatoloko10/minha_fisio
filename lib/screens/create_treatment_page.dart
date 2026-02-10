@@ -80,7 +80,12 @@ class _CreateTreatmentPageState extends State<CreateTreatmentPage> {
             Wrap(spacing: 8, children: List.generate(7, (i) => FilterChip(
               label: Text(_dayNames[i]), 
               selected: _selectedDays[i], 
-              selectedColor: Colors.blue.shade100,
+              selectedColor: Colors.blue.shade600,
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: _selectedDays[i] ? Colors.white : Colors.black,
+                fontWeight: _selectedDays[i] ? FontWeight.bold : FontWeight.normal,
+              ),
               onSelected: (v) => setState(() => _selectedDays[i] = v)
             ))),
             const SizedBox(height: 24),
@@ -176,22 +181,27 @@ class _CreateTreatmentPageState extends State<CreateTreatmentPage> {
                     await StorageService.addTreatment(treatment);
                   }
 
-                  // Notificações em background sem travar a UI
-                  NotificationService.scheduleTreatmentNotifications(treatment);
+                  // Tenta agendar notificações, mas não impede o sucesso da operação se falhar
+                  try {
+                    await NotificationService.scheduleTreatmentNotifications(treatment, isStatusUpdate: false);
+                  } catch (e) {
+                    print("Erro no agendar notificações: $e");
+                  }
 
                   if (!mounted) return;
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(isEditing ? "Alterações salvas!" : "Tratamento criado com sucesso!"),
+                      content: Text(isEditing ? "Alterações salvas!" : "Tratamento criado!"),
                       backgroundColor: Colors.green,
                     ),
                   );
-                  Navigator.pop(context); // Fecha a tela primeiro
+                  Navigator.pop(context); 
                 } catch (e) {
                   print("Erro ao salvar: $e");
                   setState(() => _isLoading = false);
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erro ao salvar tratamento no banco de dados"), backgroundColor: Colors.red));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erro ao salvar dados. Tente novamente."), backgroundColor: Colors.red));
                 }
               }, 
               style: ElevatedButton.styleFrom(
