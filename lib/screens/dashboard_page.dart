@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
-import '../services/storage_service.dart';
 import '../services/widget_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
+import '../controllers/treatment_controller.dart';
 import '../models/treatment_model.dart';
 import 'login_page.dart';
 import 'create_treatment_page.dart';
 import '../widgets/treatment_view.dart';
+import 'debug_notification_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final dynamic user;
@@ -18,18 +19,38 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
-  List<TreatmentModel> _treatments = [];
   TabController? _tabController;
   bool _isFabExpanded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-    // Verifica se o app foi aberto pelo widget
+    // Carrega os dados via Controller
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TreatmentController>().loadTreatments();
+    });
+
     HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetLaunch);
-    // Escuta cliques no widget enquanto o app está em segundo plano/aberto
     HomeWidget.widgetClicked.listen(_handleWidgetLaunch);
+  }
+
+  // Monitora mudanças no controller para recriar o TabController se necessário
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = context.watch<TreatmentController>();
+    if (_tabController == null || _tabController!.length != controller.treatments.length) {
+      int newIndex = 0;
+      if (_tabController != null) {
+        newIndex = _tabController!.index;
+        if (newIndex >= controller.treatments.length) newIndex = 0;
+      }
+      _tabController = TabController(
+        length: controller.treatments.length, 
+        vsync: this,
+        initialIndex: newIndex
+      );
+    }
   }
 
   void _handleWidgetLaunch(Uri? uri) {
@@ -37,47 +58,34 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
       final treatmentIdStr = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : null;
       if (treatmentIdStr != null && treatmentIdStr.isNotEmpty) {
         int id = int.tryParse(treatmentIdStr) ?? -1;
-        _navigateToTreatment(id);
+        // Precisamos garantir que os dados estejam carregados antes de navegar
+        Future.delayed(Duration.zero, () {
+           _navigateToTreatment(id);
+        });
       }
     }
   }
 
   void _navigateToTreatment(int treatmentId) {
-    if (treatmentId == -1 || _treatments.isEmpty) return;
+    final controller = context.read<TreatmentController>();
+    if (treatmentId == -1 || controller.treatments.isEmpty) return;
     
-    // Aguarda o quadro ser desenhado para garantir que o TabController esteja pronto
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      int index = _treatments.indexWhere((t) => t.id == treatmentId);
+      int index = controller.treatments.indexWhere((t) => t.id == treatmentId);
       if (index != -1 && _tabController != null) {
         _tabController!.animateTo(index);
       }
     });
   }
 
-  void _loadData() async {
-    final data = await StorageService.getTreatments();
-    int? currentIndex = _tabController?.index;
-    
-    setState(() { 
-      _treatments = data; 
-      _tabController = TabController(
-        length: _treatments.length, 
-        vsync: this,
-        initialIndex: (currentIndex != null && currentIndex < _treatments.length) ? currentIndex : 0
-      );
-    });
-    
-    // Atualiza o widget da tela inicial
-    await WidgetService.updateNextSessionWidget(_treatments);
-    // Garante que as notificações estejam sempre sincronizadas e dentro do limite
-    await NotificationService.rescheduleAll();
-  }
-
   void _deleteCurrentTreatment() async {
     if (_tabController == null) return;
+    final controller = context.read<TreatmentController>();
     int idx = _tabController!.index;
-    final treatment = _treatments[idx];
+    if (idx >= controller.treatments.length) return;
+
+    final treatment = controller.treatments[idx];
     
     showDialog(
       context: context,
@@ -88,9 +96,10 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCELAR")),
           TextButton(
             onPressed: () async {
-              await StorageService.deleteTreatment(treatment.id);
+              await controller.deleteTreatment(treatment.id);
               Navigator.pop(ctx);
-              _loadData();
+              // Atualiza Widgets e Notificações (Centralizado no Controller seria ideal, mas mantemos helpers aqui por enquanto)
+              WidgetService.updateNextSessionWidget(controller.treatments);
             }, 
             child: const Text("EXCLUIR", style: TextStyle(color: Colors.red))
           ),
@@ -121,6 +130,8 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final controller = context.watch<TreatmentController>();
+    final treatments = controller.treatments;
     
     return Scaffold(
       appBar: AppBar(
@@ -131,9 +142,14 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             onPressed: _toggleTheme,
             tooltip: 'Alternar Tema',
           ),
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DebugNotificationPage())),
+            tooltip: 'Debug Notificações',
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()))),
         ],
-        bottom: _treatments.isEmpty 
+        bottom: treatments.isEmpty 
           ? null 
           : TabBar(
               controller: _tabController,
@@ -141,10 +157,12 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               indicatorColor: Colors.white,
-              tabs: _treatments.map((t) => Tab(text: t.nome)).toList(),
+              tabs: treatments.map((t) => Tab(text: t.nome)).toList(),
             ),
       ),
-      body: _treatments.isEmpty
+      body: controller.isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : treatments.isEmpty
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(32.0),
@@ -173,7 +191,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                     ),
                     const SizedBox(height: 40),
                     ElevatedButton.icon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) => _loadData()),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) => controller.loadTreatments()),
                       icon: const Icon(Icons.add_rounded),
                       label: const Text(
                         "INICIAR NOVO TRATAMENTO",
@@ -195,15 +213,18 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             )
           : TabBarView(
               controller: _tabController,
-              children: _treatments.map((t) => TreatmentView(
+              children: treatments.map((t) => TreatmentView(
                     treatment: t, 
+                    // No futuro refatorar o TreatmentView para receber o controller
                     onChanged: (updated) async {
-                      await StorageService.updateTreatment(updated);
-                      _loadData();
+                      await controller.updateTreatment(updated);
+                      // loadData já é chamado dentro do updateTreatment se notificarmos ouvintes, 
+                      // mas para garantir WidgetService atualizado:
+                      WidgetService.updateNextSessionWidget(controller.treatments);
                     },
                   )).toList(),
             ),
-      floatingActionButton: _treatments.isEmpty ? null : Column(
+      floatingActionButton: treatments.isEmpty ? null : Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           if (_isFabExpanded) ...[
@@ -223,7 +244,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               onPressed: () {
                 setState(() => _isFabExpanded = false);
                 int idx = _tabController!.index;
-                Navigator.push(context, MaterialPageRoute(builder: (_) => CreateTreatmentPage(treatmentToEdit: _treatments[idx]))).then((_) => _loadData());
+                Navigator.push(context, MaterialPageRoute(builder: (_) => CreateTreatmentPage(treatmentToEdit: treatments[idx]))).then((_) => controller.loadTreatments());
               },
               child: const Icon(Icons.edit, color: Colors.blue),
             ),
@@ -237,7 +258,7 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
               if (_isFabExpanded) {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTreatmentPage())).then((_) {
                   setState(() => _isFabExpanded = false);
-                  _loadData();
+                  controller.loadTreatments();
                 });
               } else {
                 setState(() => _isFabExpanded = true);
