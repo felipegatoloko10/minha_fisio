@@ -12,6 +12,10 @@
  ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
  
  **Minha Fisio** é uma solução móvel desenvolvida em Flutter para simplificar a gestão de tratamentos fisioterapêuticos. Com foco na usabilidade e na adesão ao tratamento, o aplicativo oferece ferramentas poderosas para pacientes e profissionais.
+ 
+ ## 📥 Download
+ 
+ [**Baixar Minha Fisio v2.0 (APK)**](https://github.com/felipegatoloko10/minha_fisio/raw/main/releases/v2.0/MinhaFisio-v2.0.apk)
 
 ## ✨ Funcionalidades Principais
 
