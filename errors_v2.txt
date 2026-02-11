@@ -1,0 +1,21 @@
+﻿
+  error - Methods 
+can't be invoked in 
+constant expressions 
+- lib\screens\login_pa
+ge.dart:120:84 - const
+_eval_method_invocatio
+n
+warning - A value of 
+type 'void' can't be 
+returned by the 
+'onError' handler 
+because it must be 
+assignable to 
+'FutureOr<bool?>' - li
+b\screens\splash_page.
+dart:41:73 - invalid_r
+eturn_type_for_catch_e
+rror
+
+

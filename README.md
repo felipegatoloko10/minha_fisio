@@ -2,9 +2,9 @@
 
 O **Minha Fisio** é um aplicativo Flutter desenvolvido para ajudar pacientes a gerenciarem seus tratamentos de fisioterapia de forma organizada, intuitiva e eficiente.
 
-## 🚀 Versão 1.0 - Funcionalidades Principais
-
-Esta versão traz uma refatoração completa e a implementação de recursos avançados:
+## 🚀 Versão 2.0 - Funcionalidades Completas
+ 
+ Esta versão consolida todas as funcionalidades planejadas, trazendo estabilidade e novos recursos de segurança e usabilidade:
 
 *   **🔐 Autenticação Biométrica**: Acesso seguro via digital para proteger seus dados de saúde.
 *   **📅 Cronograma Inteligente**: Gere automaticamente todas as sessões do seu tratamento com base na quantidade e nos dias da semana escolhidos.

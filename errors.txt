@@ -1,0 +1,81 @@
+﻿
+  error - Unexpected 
+text 'return' - lib\sc
+reens\login_page.dart:
+108:5 - 
+unexpected_token
+  error - Too many 
+positional arguments: 
+0 expected, but 1 
+found - lib\screens\lo
+gin_page.dart:108:12 
+- extra_positional_arg
+uments_could_be_named
+  error - Methods 
+can't be invoked in 
+constant expressions 
+- lib\screens\login_pa
+ge.dart:120:84 - const
+_eval_method_invocatio
+n
+  error - Expected to 
+find ')' - lib\screens
+\login_page.dart:177:6
+ - expected_token
+warning - A value of 
+type 'void' can't be 
+returned by the 
+'onError' handler 
+because it must be 
+assignable to 
+'FutureOr<bool?>' - li
+b\screens\splash_page.
+dart:40:73 - invalid_r
+eturn_type_for_catch_e
+rror
+  error - The values 
+in a const list 
+literal must be 
+constants - lib\screen
+s\splash_page.dart:159
+:13 - non_constant_lis
+t_element
+  error - Undefined 
+name 'GlobalMaterialLo
+calizations' - lib\scr
+eens\splash_page.dart:
+159:13 - 
+undefined_identifier
+  error - The values 
+in a const list 
+literal must be 
+constants - lib\screen
+s\splash_page.dart:160
+:13 - non_constant_lis
+t_element
+  error - Undefined 
+name 'GlobalWidgetsLoc
+alizations' - lib\scre
+ens\splash_page.dart:1
+60:13 - 
+undefined_identifier
+  error - The values 
+in a const list 
+literal must be 
+constants - lib\screen
+s\splash_page.dart:161
+:13 - non_constant_lis
+t_element
+  error - Undefined 
+name 'GlobalCupertinoL
+ocalizations' - lib\sc
+reens\splash_page.dart
+:161:13 - 
+undefined_identifier
+  error - The name 
+'MinhaFisioApp' isn't 
+a class - test\widget_
+test.dart:14:35 - 
+creation_with_non_type
+
+
