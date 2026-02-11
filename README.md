@@ -15,7 +15,7 @@
  
  ## 📥 Download
  
- [**Baixar Minha Fisio v2.0 (APK)**](https://github.com/felipegatoloko10/minha_fisio/raw/main/releases/v2.0/MinhaFisio-v2.0.apk)
+ [**Baixar Minha Fisio v2.0.1 (APK Correção Notificações)**](https://github.com/felipegatoloko10/minha_fisio/raw/main/releases/v2.0.1/MinhaFisio-v2.0.1.apk)
 
 ## ✨ Funcionalidades Principais
 
